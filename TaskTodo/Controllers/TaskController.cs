@@ -1,12 +1,16 @@
-﻿using Microsoft.AspNetCore.Cors;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using TaskTodo.Model.DTO;
-using TaskTodo.Services;
+using TaskTodo.Model.Entity;
+using TaskTodo.Services.intreface;
 using TaskTodo.Validation;
 
 namespace TaskTodo.Controllers
 {
+    
     [EnableCors ("AllowLocalhost3000")]
     [Route("api/[controller]/[Action]")]
     [ApiController]
@@ -189,5 +193,70 @@ namespace TaskTodo.Controllers
                 return BadRequest(ex.Message);
             }
         }
+        [HttpDelete]
+        [Route("{id}")]
+        public async Task<IActionResult> DeletePamenetly(int id)
+        {
+            try
+            {
+                var Result = await _context.DeleteParmenetly(id);
+                if (Result.Result)
+                {
+                    return Ok("data deleted parmenetly");
+                }
+                return BadRequest("Error in the method");
+            }
+            catch
+            {
+                return BadRequest("somthing went wrong");
+            }
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> Excleupload( IFormFile file)
+        {
+            try
+            {
+                var result = await _context.massUpload(file);
+                if (result.Result)
+                {
+                    return Ok("Data Added successfully");
+                }
+                return BadRequest("erroe in method");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("somthing went wrong");
+            }
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetExcelfile()
+        {
+           
+
+            var result = await _context.GetExcel();
+            List < TaskData > task = (List<TaskData>)result.data;
+            string templatePath = Path.Combine(Directory.GetCurrentDirectory(), "ExportFile//TaskExcel.html");
+            string htmldata = System.IO.File.ReadAllText(templatePath);
+            string excelstring = "";
+            foreach(TaskData Task in task)
+            {
+                excelstring += "<tr><td>" + Task.Id + "</td><td>" + Task.Title + "</td><td>" + Task.Description + "</td><td>" + Task.IsCompleted + "</td><td>" + Task.CreatedDate + "</td><td>" + Task.DueDate + "</td><td>" + Task.Flag + "</td></tr>";
+
+            }
+            htmldata = htmldata.Replace("@ActualData", excelstring);
+            string stored = Path.Combine(Directory.GetCurrentDirectory(), "Excelfile", DateTime.Now.Ticks.ToString() + ".xls");
+            System.IO.File.AppendAllText(stored, htmldata);
+            var provider = new FileExtensionContentTypeProvider();
+            if(!provider.TryGetContentType(stored,out var contentType))
+            {
+                contentType = "application/octet-stream";
+            }
+            var bytes = await System.IO.File.ReadAllBytesAsync(stored);
+            return File(bytes, contentType, Path.Combine(stored));
+            
+        }
+        
     }
 }

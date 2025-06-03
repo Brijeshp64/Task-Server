@@ -10,6 +10,7 @@ namespace TaskTodo.Data
         }
         //public DbSet<Task> Tasks { get; set; }
         public DbSet<TaskData> TaskData { get; set; }
+        public DbSet<User> users { get; set; }
 
     }
 }

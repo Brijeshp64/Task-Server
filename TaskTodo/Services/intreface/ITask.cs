@@ -1,7 +1,7 @@
 ﻿using TaskTodo.Model.DTO;
 using TaskTodo.Model.Entity;
 
-namespace TaskTodo.Services
+namespace TaskTodo.Services.intreface
 {
     public interface ITask
     {
@@ -13,7 +13,9 @@ namespace TaskTodo.Services
         public Task<(int StatusCode, bool Result)> TaskRestore(int id);
         public Task<(int StatusCode, bool Result)> TaskComplete(int id);
         public Task<(int StatusCode, IEnumerable<TaskData> data, bool Result)> GetAllDeletedTask();
-
+        public Task<(int StatusCode,bool Result)> DeleteParmenetly(int id);
+        public Task<(int StatusCode, bool Result)> massUpload(IFormFile file);
+        public Task<(int StatusCode, IEnumerable<TaskData> data, bool Result)> GetExcel();
 
     }
 }

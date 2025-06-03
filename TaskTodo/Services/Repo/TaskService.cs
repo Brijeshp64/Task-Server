@@ -1,15 +1,20 @@
-﻿using TaskTodo.DAL.AccessService;
+﻿using ExcelDataReader;
+using TaskTodo.DAL.AccessService;
+using TaskTodo.Data;
 using TaskTodo.Model.DTO;
 using TaskTodo.Model.Entity;
+using TaskTodo.Services.intreface;
 
-namespace TaskTodo.Services
+namespace TaskTodo.Services.Repo
 {
     public class TaskService : ITask
     {
         private readonly ITaskAuth _context;
-        public TaskService(ITaskAuth context)
+        private readonly ApplicationDbContext _applicationDb;
+        public TaskService(ITaskAuth context, ApplicationDbContext applicationDb)
         {
             _context = context;
+            _applicationDb = applicationDb;
         }
 
 
@@ -154,5 +159,82 @@ namespace TaskTodo.Services
 
             }
         }
+        public async Task<(int StatusCode, bool Result)> DeleteParmenetly(int id)
+        {
+            try
+            {
+                var data = await _context.GetByIdAsync(id);
+                await _context.DeleteAsync(data);
+                return(200, true);
+            }
+            catch (Exception ex)
+            {
+                return (500, false);
+            }
+        }
+
+        public async Task<(int StatusCode, bool Result)> massUpload(IFormFile file)
+        {
+            try
+            {
+                if(file == null || file.Length == 0)
+                {
+                    return (500, false);
+                }
+                var uploadFolder = $"{Directory.GetCurrentDirectory()}\\upload";
+                if (!Directory.Exists(uploadFolder))
+                {
+                    Directory.CreateDirectory(uploadFolder);
+                }
+
+                var filePath = Path.Combine(uploadFolder, file.Name);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    file.CopyTo(stream);
+                }
+                using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read))
+                {
+                    
+                    using (var reader = ExcelReaderFactory.CreateReader(stream))
+                    {
+                        bool HeaderSkip  = false;   
+                        do
+                        {
+                            while (reader.Read())
+                            {
+                                if(!HeaderSkip)
+                                {
+                                    HeaderSkip = true;
+                                    continue;
+                                }
+                                TaskData t = new TaskData();
+                                t.Title = reader.GetValue(1).ToString();
+                                t.Description = reader.GetValue(2).ToString();
+                                t.IsCompleted = false;
+
+                                _applicationDb.AddAsync(t);
+                                _applicationDb.SaveChangesAsync();
+                            }
+                        } while (reader.NextResult());
+
+                        
+                    }
+                }
+                return (200, true);
+            }
+            catch (Exception ex) {
+                return (500,false);
+            }
+        }
+
+        public async Task<(int StatusCode, IEnumerable<TaskData> data, bool Result)> GetExcel()
+        {
+            var data = await _context.GetAllAsync();
+           
+
+            return (200, data, true);
+        }
+
+       
     }
 }
